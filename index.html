@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Suunto Body AI Scale Demo</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="hero">
+        <div class="hero-copy">
+          <p class="eyebrow">SUUNTO BODY CONCEPT</p>
+          <h1>8 电极智能体脂秤固件交互 Demo</h1>
+          <p class="intro">
+            模拟用户站上体脂秤、拉出上肢杆、完成 BIA 测量、查看结果，并继续向 AI 教练追问训练和课程建议。
+          </p>
+        </div>
+        <div class="status-strip" aria-label="设备状态">
+          <span id="connectionStatus">Wi-Fi synced</span>
+          <span>Battery 86%</span>
+          <span>Family 3/16</span>
+        </div>
+      </section>
+
+      <section class="demo-grid" aria-label="智能体脂秤固件演示">
+        <div class="device-stage">
+          <div class="scale-visual" id="scaleVisual">
+            <div class="handle" id="handle">
+              <div class="hand-electrode left"></div>
+              <div class="firmware-screen" aria-live="polite">
+                <div class="screen-top">
+                  <span id="screenMode">READY</span>
+                  <span id="screenSignal">86%</span>
+                </div>
+                <div class="screen-main" id="screenMain">SUUNTO<br />BODY</div>
+                <div class="screen-sub" id="screenSub">step on to wake</div>
+              </div>
+              <div class="hand-electrode right"></div>
+            </div>
+            <div class="scale-body">
+              <div class="scan-ring" id="scanRing"></div>
+              <div class="footprints">
+                <div class="foot left">
+                  <span></span>
+                  <span></span>
+                </div>
+                <div class="foot right">
+                  <span></span>
+                  <span></span>
+                </div>
+              </div>
+              <div class="weight-readout" id="weightReadout">--.- kg</div>
+              <div class="scale-label">8 electrodes · tri-frequency BIA</div>
+            </div>
+          </div>
+
+          <div class="mode-controls" aria-label="测量模式">
+            <button class="primary" id="startMeasure">站上体脂秤</button>
+            <button id="weightOnly">普通称重</button>
+            <button id="babyMode">抱婴模式</button>
+            <button id="resetDemo">重新测量</button>
+          </div>
+        </div>
+
+        <aside class="panel" aria-label="测量与 AI 教练面板">
+          <div class="panel-header">
+            <div>
+              <p class="eyebrow">FIRMWARE FLOW</p>
+              <h2 id="flowTitle">待机，等待上秤</h2>
+            </div>
+            <span class="pill" id="flowPill">Sleep</span>
+          </div>
+
+          <div class="progress-block">
+            <div class="progress-meta">
+              <span id="progressLabel">准备开始</span>
+              <span id="progressValue">0%</span>
+            </div>
+            <div class="progress-track">
+              <div id="progressBar"></div>
+            </div>
+          </div>
+
+          <div class="contact-grid" aria-label="接触质量">
+            <div class="contact-card" data-contact="leftHand">
+              <span>左手</span>
+              <strong id="leftHand">--</strong>
+            </div>
+            <div class="contact-card" data-contact="rightHand">
+              <span>右手</span>
+              <strong id="rightHand">--</strong>
+            </div>
+            <div class="contact-card" data-contact="leftFoot">
+              <span>左脚</span>
+              <strong id="leftFoot">--</strong>
+            </div>
+            <div class="contact-card" data-contact="rightFoot">
+              <span>右脚</span>
+              <strong id="rightFoot">--</strong>
+            </div>
+          </div>
+
+          <div class="results-grid" id="resultsGrid" aria-label="测量结果">
+            <div class="metric">
+              <span>体重</span>
+              <strong id="metricWeight">--</strong>
+              <em id="deltaWeight">--</em>
+            </div>
+            <div class="metric">
+              <span>体脂率</span>
+              <strong id="metricFat">--</strong>
+              <em id="deltaFat">--</em>
+            </div>
+            <div class="metric">
+              <span>骨骼肌</span>
+              <strong id="metricMuscle">--</strong>
+              <em id="deltaMuscle">--</em>
+            </div>
+            <div class="metric">
+              <span>水分率</span>
+              <strong id="metricWater">--</strong>
+              <em id="deltaWater">--</em>
+            </div>
+          </div>
+
+          <div class="coach-box">
+            <div class="coach-heading">
+              <span class="pulse"></span>
+              <strong>Suunto AI 教练</strong>
+            </div>
+            <div class="chat-log" id="chatLog" aria-live="polite">
+              <div class="message coach">完成测量后，我会根据体成分、测量质量和训练目标给出建议。</div>
+            </div>
+            <div class="quick-actions">
+              <button data-question="今天练什么？">今天练什么？</button>
+              <button data-question="怎么补水？">怎么补水？</button>
+              <button data-question="给我一节课程">给我一节课程</button>
+            </div>
+            <form class="chat-form" id="chatForm">
+              <input id="chatInput" type="text" placeholder="继续追问，例如：明天有长跑怎么办？" />
+              <button type="submit">发送</button>
+            </form>
+          </div>
+        </aside>
+      </section>
+
+      <section class="course-section" aria-label="课程建议">
+        <div class="section-title">
+          <p class="eyebrow">TRAINING PLAN</p>
+          <h2>测后返回课程与行动建议</h2>
+        </div>
+        <div class="course-grid" id="courseGrid">
+          <article class="course-card muted">
+            <span>等待测量</span>
+            <h3>AI 教练课程尚未生成</h3>
+            <p>完整测量或追问课程后，将显示有氧、力量和恢复建议。</p>
+          </article>
+        </div>
+      </section>
+    </main>
+
+    <script src="script.js"></script>
+  </body>
+</html>
