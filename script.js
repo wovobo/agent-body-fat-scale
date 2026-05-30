@@ -1,4 +1,4 @@
-const users = ["Wang", "Alex", "Guest"];
+const users = ["Wang", "Alex", "Chen"];
 
 const measurementData = {
   weight: "68.4 kg",
@@ -19,23 +19,27 @@ const replies = [
   {
     keys: ["练", "训练", "今天", "运动"],
     title: "TODAY",
-    body: "45 分钟 Z2 有氧。水分偏低，不建议追加高强度间歇。",
+    main: "45 分钟 Z2 有氧",
+    sub: "水分偏低，不建议追加高强度间歇。",
   },
   {
     keys: ["水", "补水", "喝", "恢复"],
     title: "HYDRATE",
-    body: "2 小时内分次补水 500-700ml，并补一点电解质。",
+    main: "补水 500-700ml",
+    sub: "2 小时内分次完成，并补一点电解质。",
   },
   {
     keys: ["课程", "计划", "课"],
     title: "COURSE",
-    body: "返回 3 节课程：Z2 有氧、下肢力量维护、补水恢复。",
+    main: "3 节课程",
+    sub: "Z2 有氧、下肢力量维护、补水恢复。",
     courses: true,
   },
   {
     keys: ["长跑", "比赛", "马拉松", "明天"],
     title: "LONG RUN",
-    body: "今晚不要加力量课。轻松拉伸、补水、保证碳水，明早只看体重趋势。",
+    main: "今晚不加力量课",
+    sub: "轻松拉伸、补水、保证碳水，明早只看体重趋势。",
   },
 ];
 
@@ -52,8 +56,6 @@ const el = {
   progressBar: document.getElementById("progressBar"),
   userMatch: document.getElementById("userMatch"),
   switchUser: document.getElementById("switchUser"),
-  chatForm: document.getElementById("chatForm"),
-  chatInput: document.getElementById("chatInput"),
 };
 
 const timers = [];
@@ -73,11 +75,29 @@ function clearTimers() {
 function setScreen({ mode, signal = "86%", kicker, main, sub, details = "" }) {
   el.screenMode.textContent = mode;
   el.screenSignal.textContent = signal;
+  el.screenContent.dataset.mode = mode.toLowerCase();
   el.screenContent.innerHTML = `
     <div class="screen-kicker">${kicker}</div>
     <div class="screen-main">${main}</div>
     <div class="screen-sub">${sub}</div>
     ${details ? `<div class="screen-details">${details}</div>` : ""}
+  `;
+}
+
+function metricDetails(items) {
+  return `
+    <div class="mini-metrics">
+      ${items
+        .map(
+          ([label, value]) => `
+            <div>
+              <strong>${label}</strong>
+              <span>${value}</span>
+            </div>
+          `,
+        )
+        .join("")}
+    </div>
   `;
 }
 
@@ -140,15 +160,15 @@ function completeBodyMeasurement() {
   setScreen({
     mode: "RESULT",
     signal: "synced",
-    kicker: `USER ${users[selectedUserIndex]} · CONF ${measurementData.confidence}`,
-    main: `${measurementData.weight}<br><span>${measurementData.fat} FAT</span>`,
-    sub: "AI 趋势分析已生成",
-    details: `
-      <div><strong>肌肉</strong><span>${measurementData.muscle}</span></div>
-      <div><strong>水分</strong><span>${measurementData.water}</span></div>
-      <p>${measurementData.trend}</p>
-      <p class="advice">体重下降主要来自水分波动。今天建议 Z2 有氧，不追加高强度间歇。</p>
-    `,
+    kicker: `已识别 ${users[selectedUserIndex]} · 置信度 ${measurementData.confidence}`,
+    main: measurementData.weight,
+    sub: "体重下降主要来自水分波动。今天建议 Z2 有氧，不追加高强度间歇。",
+    details: metricDetails([
+      ["体脂", measurementData.fat],
+      ["骨骼肌", measurementData.muscle],
+      ["水分", measurementData.water],
+      ["趋势", "-0.4kg / 7天"],
+    ]),
   });
 }
 
@@ -163,7 +183,7 @@ function startBodyMeasurement() {
     mode: "WAKE",
     kicker: "BODY MEASURE",
     main: measurementData.weight,
-    sub: "请拉出上肢杆",
+    sub: "请拉出上肢杆，完整体脂测量约 30 秒。",
   });
 
   schedule(() => {
@@ -172,7 +192,7 @@ function startBodyMeasurement() {
     setScreen({
       mode: "CONTACT",
       kicker: "ELECTRODES",
-      main: "3 / 4 OK",
+      main: "3/4",
       sub: "右手接触不足，请握稳",
       details: '<div class="contact-dots"><span class="ok"></span><span class="warn"></span><span class="ok"></span><span class="ok"></span></div>',
     });
@@ -183,7 +203,7 @@ function startBodyMeasurement() {
     setScreen({
       mode: "CONTACT",
       kicker: "ELECTRODES",
-      main: "4 / 4 OK",
+      main: "4/4",
       sub: "开始三频 BIA 扫描",
       details: '<div class="contact-dots"><span class="ok"></span><span class="ok"></span><span class="ok"></span><span class="ok"></span></div>',
     });
@@ -237,10 +257,15 @@ function startWeightOnly() {
   setScreen({
     mode: "WEIGHT",
     signal: "saved",
-    kicker: `USER ${users[selectedUserIndex]}`,
+    kicker: `已识别 ${users[selectedUserIndex]}`,
     main: measurementData.weight,
-    sub: "仅体重数据，无 AI 建议",
-    details: "<p>未拉出上肢杆，系统跳过 BIA。不会生成体脂、肌肉、水分和训练建议。</p>",
+    sub: "普通称重已保存。仅体重数据，无 AI 建议。",
+    details: metricDetails([
+      ["模式", "Weight only"],
+      ["速度", "快速"],
+      ["BIA", "跳过"],
+      ["建议", "不生成"],
+    ]),
   });
 }
 
@@ -250,16 +275,15 @@ function renderCoachReply(reply) {
     setScreen({
       mode: "COURSE",
       signal: "AI",
-      kicker: "TRAINING PLAN",
-      main: "3 COURSES",
-      sub: "根据体脂趋势和水分状态返回",
+      kicker: "AI 课程建议",
+      main: "课程建议",
+      sub: "基于体脂趋势与水分状态",
       details: courses
         .map(
           ([name, duration, text]) => `
             <div class="course-line">
               <strong>${name}</strong>
-              <span>${duration}</span>
-              <em>${text}</em>
+              <span>${duration} · ${text}</span>
             </div>
           `,
         )
@@ -271,9 +295,9 @@ function renderCoachReply(reply) {
   setScreen({
     mode: "AI",
     signal: "coach",
-    kicker: reply.title,
-    main: "ADVICE",
-    sub: reply.body,
+    kicker: `AI 建议 · ${reply.title}`,
+    main: reply.main || "低强度优先",
+    sub: reply.sub || reply.body,
   });
 }
 
@@ -305,7 +329,8 @@ function answerQuestion(question) {
     replies.find((item) => item.keys.some((key) => cleanQuestion.includes(key))) ||
     {
       title: "TREND",
-      body: "建议先保持低强度训练，观察 7 天体重和水分趋势，再根据骨骼肌变化调整力量课。",
+      main: "先稳住低强度",
+      sub: "观察 7 天体重和水分趋势，再根据骨骼肌变化调整力量课。",
     };
   renderCoachReply(reply);
 }
@@ -320,20 +345,14 @@ document.getElementById("switchUser").addEventListener("click", () => {
   setScreen({
     mode: "USER",
     signal: "edited",
-    kicker: "USER MATCH",
+    kicker: "用户归属已更正",
     main: users[selectedUserIndex],
-    sub: "已手动更正本次测量归属",
+    sub: "本次测量将归入新的家庭成员档案",
   });
 });
 
 document.querySelectorAll("[data-question]").forEach((button) => {
   button.addEventListener("click", () => answerQuestion(button.dataset.question));
-});
-
-el.chatForm.addEventListener("submit", (event) => {
-  event.preventDefault();
-  answerQuestion(el.chatInput.value);
-  el.chatInput.value = "";
 });
 
 resetDemo();

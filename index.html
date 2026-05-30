@@ -14,7 +14,7 @@
           <p class="eyebrow">SUUNTO BODY CONCEPT</p>
           <h1>智能体脂秤固件交互 Demo</h1>
         </div>
-        <p class="topbar-note">主视角：秤端屏幕 · 右侧仅做演示控制和追问</p>
+        <p class="topbar-note">左侧固定展示体脂秤，右侧只负责选择测量和追问</p>
       </header>
 
       <section class="demo-grid" aria-label="智能体脂秤固件演示">
@@ -84,7 +84,7 @@
 
           <section class="panel-card compact">
             <div class="panel-row">
-              <span>识别用户</span>
+              <span>本次归属</span>
               <strong id="userMatch">未测量</strong>
             </div>
             <button class="secondary-action" id="switchUser" disabled>更正用户</button>
@@ -111,10 +111,6 @@
               <button data-question="给我一节课程">给我一节课程</button>
               <button data-question="明天有长跑怎么办？">明天有长跑怎么办？</button>
             </div>
-            <form class="chat-form" id="chatForm">
-              <input id="chatInput" type="text" placeholder="继续追问训练、补水或课程" />
-              <button type="submit">发送</button>
-            </form>
           </section>
 
           <button class="reset-action" id="resetDemo">回到待机</button>
