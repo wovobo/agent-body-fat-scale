@@ -204,7 +204,8 @@ h2 {
   border: 1px solid #343a3f;
   border-radius: 8px;
   background:
-    linear-gradient(145deg, rgba(97, 215, 232, 0.13), transparent 52%),
+    radial-gradient(circle at 50% 15%, rgba(97, 215, 232, 0.14), transparent 34%),
+    linear-gradient(145deg, rgba(255, 107, 42, 0.08), transparent 52%),
     #050607;
   padding: 16px;
   overflow: hidden;
@@ -225,22 +226,30 @@ h2 {
 .screen-content {
   height: 188px;
   display: grid;
-  align-content: center;
-  gap: 8px;
+  grid-template-rows: auto auto minmax(0, 1fr) auto auto;
+  align-content: stretch;
+  gap: 6px;
   text-align: center;
   overflow: hidden;
 }
 
+.screen-content.screen-updated .screen-kicker,
+.screen-content.screen-updated .screen-main,
+.screen-content.screen-updated .screen-sub,
+.screen-content.screen-updated .screen-motion {
+  animation: firmwareUpdate 360ms ease both;
+}
+
 .screen-kicker {
   color: var(--orange-2);
-  font-size: 13px;
+  font-size: 11px;
   font-weight: 950;
   text-transform: uppercase;
 }
 
 .screen-main {
   color: #fff;
-  font-size: 54px;
+  font-size: 44px;
   font-weight: 950;
   line-height: 1.02;
   letter-spacing: 0;
@@ -254,10 +263,21 @@ h2 {
 
 .screen-sub {
   color: #d9e0e2;
-  font-size: 20px;
+  font-size: 17px;
   font-weight: 800;
-  line-height: 1.35;
+  line-height: 1.28;
   text-wrap: balance;
+}
+
+.screen-motion {
+  min-height: 40px;
+  display: grid;
+  align-items: center;
+  overflow: hidden;
+}
+
+.screen-motion:empty {
+  display: none;
 }
 
 .screen-details {
@@ -314,6 +334,79 @@ h2 {
   background: var(--danger);
 }
 
+.contact-panel {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.contact-panel span {
+  border: 1px solid #242a2f;
+  border-radius: 999px;
+  background: #101417;
+  color: #dce4e4;
+  padding: 7px 4px;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.contact-panel .ok {
+  border-color: rgba(72, 213, 151, 0.58);
+  background: rgba(72, 213, 151, 0.12);
+}
+
+.contact-panel .warn {
+  border-color: rgba(255, 90, 99, 0.7);
+  background: rgba(255, 90, 99, 0.13);
+  animation: contactWarn 820ms ease-in-out infinite;
+}
+
+.scan-panel {
+  position: relative;
+  height: 40px;
+  border: 1px solid rgba(97, 215, 232, 0.35);
+  border-radius: 999px;
+  background:
+    linear-gradient(90deg, transparent, rgba(97, 215, 232, 0.16), transparent),
+    rgba(97, 215, 232, 0.06);
+  overflow: hidden;
+}
+
+.scan-panel::before {
+  content: "";
+  position: absolute;
+  inset: 5px;
+  border-radius: inherit;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.85), transparent);
+  transform: translateX(-105%);
+  animation: scanSweep 1.25s ease-in-out infinite;
+}
+
+.scan-panel span {
+  position: absolute;
+  top: 50%;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--cyan);
+  box-shadow: 0 0 14px rgba(97, 215, 232, 0.85);
+}
+
+.scan-panel span:nth-child(1) {
+  left: 24%;
+  animation: nodePulse 1.2s ease-in-out infinite;
+}
+
+.scan-panel span:nth-child(2) {
+  left: 50%;
+  animation: nodePulse 1.2s 160ms ease-in-out infinite;
+}
+
+.scan-panel span:nth-child(3) {
+  left: 76%;
+  animation: nodePulse 1.2s 320ms ease-in-out infinite;
+}
+
 .course-line {
   grid-column: 1 / -1;
   display: grid;
@@ -332,16 +425,28 @@ h2 {
   font-style: normal;
 }
 
+.screen-content[data-mode="result"] .screen-main,
+.screen-content[data-mode="ai"] .screen-main,
+.screen-content[data-mode="user"] .screen-main {
+  font-size: 31px;
+}
+
+.screen-content[data-mode="result"] .screen-sub,
+.screen-content[data-mode="ai"] .screen-sub,
+.screen-content[data-mode="user"] .screen-sub {
+  font-size: 15px;
+}
+
 .screen-content[data-mode="course"] {
   gap: 5px;
 }
 
 .screen-content[data-mode="course"] .screen-main {
-  font-size: 30px;
+  font-size: 34px;
 }
 
 .screen-content[data-mode="course"] .screen-sub {
-  font-size: 15px;
+  font-size: 14px;
 }
 
 .screen-content[data-mode="course"] .screen-details {
@@ -353,11 +458,6 @@ h2 {
   color: #fff;
   font-size: 12px;
   line-height: 1.25;
-}
-
-.screen-content[data-mode="ai"] .screen-main,
-.screen-content[data-mode="user"] .screen-main {
-  font-size: 42px;
 }
 
 .mini-metrics {
@@ -385,9 +485,61 @@ h2 {
   display: block;
   margin-top: 3px;
   color: #fff;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 900;
   white-space: nowrap;
+}
+
+.screen-rail {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 5px;
+}
+
+.screen-rail.weight-flow {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.screen-rail span {
+  position: relative;
+  border: 1px solid #242a2f;
+  border-radius: 999px;
+  background: #101417;
+  color: #788388;
+  padding: 5px 3px;
+  font-size: 10px;
+  font-weight: 900;
+  overflow: hidden;
+}
+
+.screen-rail span::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(255, 107, 42, 0.24);
+  transform: translateX(-100%);
+}
+
+.screen-rail span.done,
+.screen-rail span.active {
+  border-color: rgba(255, 107, 42, 0.52);
+  color: #fff;
+}
+
+.screen-rail span.done::before {
+  transform: translateX(0);
+}
+
+.screen-rail span.active::before {
+  animation: railFill 1s ease-in-out infinite;
+}
+
+.screen-rail span {
+  isolation: isolate;
+}
+
+.screen-rail span::before {
+  z-index: -1;
 }
 
 .scale-body {
@@ -443,6 +595,16 @@ h2 {
 .scale-visual.awake .foot span {
   border-color: rgba(255, 107, 42, 0.5);
   box-shadow: 0 0 26px rgba(255, 107, 42, 0.12);
+}
+
+.scale-visual.contacting .hand-electrode,
+.scale-visual.measuring .hand-electrode {
+  border-color: rgba(255, 107, 42, 0.68);
+  box-shadow: 0 0 24px rgba(255, 107, 42, 0.16);
+}
+
+.scale-visual.contacting .foot span {
+  animation: contactFoot 900ms ease-in-out infinite;
 }
 
 .weight-readout {
@@ -507,6 +669,10 @@ h2 {
   margin-top: 9px;
 }
 
+.step-list.weight-list {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
 .step-list span {
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -517,6 +683,10 @@ h2 {
   font-size: 11px;
   font-weight: 850;
   text-align: center;
+}
+
+.step-list span[hidden] {
+  display: none;
 }
 
 .step-list span.active {
@@ -663,6 +833,69 @@ h2 {
   100% {
     transform: scale(0.86);
     opacity: 0.35;
+  }
+}
+
+@keyframes firmwareUpdate {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes contactWarn {
+  0%,
+  100% {
+    box-shadow: 0 0 0 rgba(255, 90, 99, 0);
+  }
+  50% {
+    box-shadow: 0 0 16px rgba(255, 90, 99, 0.38);
+  }
+}
+
+@keyframes scanSweep {
+  0% {
+    transform: translateX(-105%);
+  }
+  52%,
+  100% {
+    transform: translateX(105%);
+  }
+}
+
+@keyframes nodePulse {
+  0%,
+  100% {
+    transform: translateY(-50%) scale(0.72);
+    opacity: 0.55;
+  }
+  50% {
+    transform: translateY(-50%) scale(1.18);
+    opacity: 1;
+  }
+}
+
+@keyframes railFill {
+  0% {
+    transform: translateX(-100%);
+  }
+  60%,
+  100% {
+    transform: translateX(0);
+  }
+}
+
+@keyframes contactFoot {
+  0%,
+  100% {
+    box-shadow: 0 0 18px rgba(255, 107, 42, 0.08);
+  }
+  50% {
+    box-shadow: 0 0 34px rgba(255, 107, 42, 0.24);
   }
 }
 

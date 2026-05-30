@@ -56,12 +56,42 @@ const el = {
   progressBar: document.getElementById("progressBar"),
   userMatch: document.getElementById("userMatch"),
   switchUser: document.getElementById("switchUser"),
+  stepList: document.querySelector(".step-list"),
 };
 
 const timers = [];
 let measurementMode = "idle";
 let measurementComplete = false;
 let selectedUserIndex = 0;
+
+const screenFlows = {
+  body: [
+    ["wake", "上秤"],
+    ["contact", "接触"],
+    ["scan", "测量"],
+    ["result", "建议"],
+  ],
+  weight: [
+    ["wake", "上秤"],
+    ["identify", "识别"],
+    ["saved", "保存"],
+  ],
+};
+
+const demoStepFlows = {
+  body: [
+    ["wake", "1 上秤"],
+    ["contact", "2 接触"],
+    ["scan", "3 测量"],
+    ["result", "4 结果"],
+    ["coach", "5 追问"],
+  ],
+  weight: [
+    ["wake", "1 上秤"],
+    ["identify", "2 识别"],
+    ["saved", "3 保存"],
+  ],
+};
 
 function schedule(fn, delay) {
   const timer = window.setTimeout(fn, delay);
@@ -72,16 +102,84 @@ function clearTimers() {
   while (timers.length) window.clearTimeout(timers.pop());
 }
 
-function setScreen({ mode, signal = "86%", kicker, main, sub, details = "" }) {
+function phaseRail(activeStage, flow = "body") {
+  const stages = screenFlows[flow] || screenFlows.body;
+  const activeIndex = Math.max(
+    0,
+    stages.findIndex(([stage]) => stage === activeStage),
+  );
+  return `
+    <div class="screen-rail ${flow === "weight" ? "weight-flow" : ""}" aria-label="屏幕测量阶段">
+      ${stages
+        .map(([stage, label], index) => {
+          const state = index < activeIndex ? "done" : index === activeIndex ? "active" : "";
+          return `<span class="${state}">${label}</span>`;
+        })
+        .join("")}
+    </div>
+  `;
+}
+
+function motionDetails(visual) {
+  if (visual === "contactWarn") {
+    return `
+      <div class="contact-panel">
+        <span class="ok">脚</span>
+        <span class="ok">左手</span>
+        <span class="warn">右手</span>
+        <span class="ok">站稳</span>
+      </div>
+    `;
+  }
+
+  if (visual === "contactOk") {
+    return `
+      <div class="contact-panel">
+        <span class="ok">脚</span>
+        <span class="ok">左手</span>
+        <span class="ok">右手</span>
+        <span class="ok">站稳</span>
+      </div>
+    `;
+  }
+
+  if (visual === "scan") {
+    return `
+      <div class="scan-panel">
+        <span></span>
+        <span></span>
+        <span></span>
+      </div>
+    `;
+  }
+
+  return "";
+}
+
+function setScreen({
+  mode,
+  signal = "86%",
+  kicker,
+  main,
+  sub,
+  details = "",
+  stage = "wake",
+  visual = "idle",
+  flow = "body",
+}) {
   el.screenMode.textContent = mode;
   el.screenSignal.textContent = signal;
   el.screenContent.dataset.mode = mode.toLowerCase();
+  el.screenContent.dataset.visual = visual;
+  el.screenContent.classList.remove("screen-updated");
   el.screenContent.innerHTML = `
     <div class="screen-kicker">${kicker}</div>
     <div class="screen-main">${main}</div>
     <div class="screen-sub">${sub}</div>
-    ${details ? `<div class="screen-details">${details}</div>` : ""}
+    <div class="screen-motion">${details || motionDetails(visual)}</div>
+    ${phaseRail(stage, flow)}
   `;
+  window.requestAnimationFrame(() => el.screenContent.classList.add("screen-updated"));
 }
 
 function metricDetails(items) {
@@ -113,6 +211,18 @@ function setStep(step) {
   });
 }
 
+function setStepDisplay(flow = "body") {
+  const steps = demoStepFlows[flow] || demoStepFlows.body;
+  el.stepList.classList.toggle("weight-list", flow === "weight");
+  el.stepList.querySelectorAll("span").forEach((item, index) => {
+    const step = steps[index];
+    item.hidden = !step;
+    if (!step) return;
+    item.dataset.step = step[0];
+    item.textContent = step[1];
+  });
+}
+
 function setMetrics({ weight = "--", fat = "--", muscle = "--", water = "--" }) {
   document.getElementById("metricWeight").textContent = weight;
   document.getElementById("metricFat").textContent = fat;
@@ -131,14 +241,19 @@ function resetDemo() {
   el.flowTitle.textContent = "待机";
   el.userMatch.textContent = "未测量";
   el.switchUser.disabled = true;
+  setStepDisplay("body");
   setStep("wake");
   setProgress(0, "等待开始");
   setMetrics({});
   setScreen({
     mode: "READY",
     kicker: "SUUNTO BODY",
-    main: "READY",
-    sub: "站上设备开始测量",
+    signal: "stand by",
+    kicker: "待机",
+    main: "请上秤",
+    sub: "脚部接触后自动识别用户",
+    stage: "wake",
+    visual: "idle",
   });
 }
 
@@ -159,15 +274,18 @@ function completeBodyMeasurement() {
   setMetrics(measurementData);
   setScreen({
     mode: "RESULT",
-    signal: "synced",
-    kicker: `已识别 ${users[selectedUserIndex]} · 置信度 ${measurementData.confidence}`,
-    main: measurementData.weight,
-    sub: "体重下降主要来自水分波动。今天建议 Z2 有氧，不追加高强度间歇。",
+    signal: users[selectedUserIndex],
+    kicker: "AI 趋势建议",
+    main: "今天做 Z2 有氧",
+    sub: "水分偏低，暂不追加高强度间歇。",
+    stage: "result",
+    flow: "body",
+    visual: "result",
     details: metricDetails([
+      ["体重", measurementData.weight],
       ["体脂", measurementData.fat],
-      ["骨骼肌", measurementData.muscle],
       ["水分", measurementData.water],
-      ["趋势", "-0.4kg / 7天"],
+      ["趋势", "-0.4kg"],
     ]),
   });
 }
@@ -181,20 +299,26 @@ function startBodyMeasurement() {
   setProgress(8, "设备唤醒，准备完整体脂测量");
   setScreen({
     mode: "WAKE",
-    kicker: "BODY MEASURE",
+    signal: "live",
+    kicker: "1 上秤",
     main: measurementData.weight,
-    sub: "请拉出上肢杆，完整体脂测量约 30 秒。",
+    sub: "体重已稳定，准备检查电极接触。",
+    stage: "wake",
+    visual: "weight",
   });
 
   schedule(() => {
     setStep("contact");
+    el.scaleVisual.classList.add("contacting");
     setProgress(24, "脚部接触 OK，等待手部电极");
     setScreen({
       mode: "CONTACT",
-      kicker: "ELECTRODES",
-      main: "3/4",
-      sub: "右手接触不足，请握稳",
-      details: '<div class="contact-dots"><span class="ok"></span><span class="warn"></span><span class="ok"></span><span class="ok"></span></div>',
+      signal: "3/4",
+      kicker: "2 接触检测",
+      main: "握稳右手",
+      sub: "右手电极接触不足，保持站稳。",
+      stage: "contact",
+      visual: "contactWarn",
     });
   }, 900);
 
@@ -202,23 +326,29 @@ function startBodyMeasurement() {
     setProgress(38, "四点接触质量合格");
     setScreen({
       mode: "CONTACT",
-      kicker: "ELECTRODES",
-      main: "4/4",
-      sub: "开始三频 BIA 扫描",
-      details: '<div class="contact-dots"><span class="ok"></span><span class="ok"></span><span class="ok"></span><span class="ok"></span></div>',
+      signal: "4/4",
+      kicker: "2 接触检测",
+      main: "接触良好",
+      sub: "脚部与手部电极已连接。",
+      stage: "contact",
+      visual: "contactOk",
     });
   }, 2100);
 
   schedule(() => {
     setStep("scan");
+    el.scaleVisual.classList.remove("contacting");
     el.scaleVisual.classList.add("measuring");
     el.flowTitle.textContent = "完整体脂测量中";
     setProgress(48, "三频 × 五节段阻抗采集中");
     setScreen({
       mode: "SCAN",
-      kicker: "BIA SCAN",
+      signal: "48%",
+      kicker: "3 BIA 测量中",
       main: "00:28",
-      sub: "5kHz / 50kHz / 200kHz",
+      sub: "三频电流正在采集身体阻抗。",
+      stage: "scan",
+      visual: "scan",
     });
   }, 3100);
 
@@ -232,9 +362,12 @@ function startBodyMeasurement() {
       setProgress(value, label);
       setScreen({
         mode: "SCAN",
-        kicker: "BIA SCAN",
+        signal: `${value}%`,
+        kicker: "3 BIA 测量中",
         main: time,
         sub: label,
+        stage: "scan",
+        visual: "scan",
       });
     }, 4200 + index * 850);
   });
@@ -250,16 +383,20 @@ function startWeightOnly() {
   el.weightReadout.textContent = measurementData.weight;
   el.scaleLabel.textContent = "weight-only mode · no BIA";
   identifyUser("weight");
-  setStep("result");
+  setStepDisplay("weight");
+  setStep("saved");
   setProgress(100, "普通称重完成，速度更快，仅记录体重");
   el.flowTitle.textContent = "普通称重完成";
   setMetrics({ weight: measurementData.weight });
   setScreen({
     mode: "WEIGHT",
     signal: "saved",
-    kicker: `已识别 ${users[selectedUserIndex]}`,
+    kicker: "普通称重完成",
     main: measurementData.weight,
-    sub: "普通称重已保存。仅体重数据，无 AI 建议。",
+    sub: `已识别 ${users[selectedUserIndex]}，仅保存体重。`,
+    stage: "saved",
+    flow: "weight",
+    visual: "result",
     details: metricDetails([
       ["模式", "Weight only"],
       ["速度", "快速"],
@@ -275,19 +412,13 @@ function renderCoachReply(reply) {
     setScreen({
       mode: "COURSE",
       signal: "AI",
-      kicker: "AI 课程建议",
-      main: "课程建议",
-      sub: "基于体脂趋势与水分状态",
-      details: courses
-        .map(
-          ([name, duration, text]) => `
-            <div class="course-line">
-              <strong>${name}</strong>
-              <span>${duration} · ${text}</span>
-            </div>
-          `,
-        )
-        .join(""),
+      kicker: "AI 课程",
+      main: "Z2 有氧 45'",
+      sub: "随后做 20' 下肢力量和 10' 补水恢复。",
+      stage: "result",
+      flow: "body",
+      visual: "result",
+      details: metricDetails(courses.map(([name, duration]) => [name, duration])),
     });
     return;
   }
@@ -298,6 +429,9 @@ function renderCoachReply(reply) {
     kicker: `AI 建议 · ${reply.title}`,
     main: reply.main || "低强度优先",
     sub: reply.sub || reply.body,
+    stage: "result",
+    flow: "body",
+    visual: "result",
   });
 }
 
@@ -311,6 +445,8 @@ function answerQuestion(question) {
       kicker: "AI COACH",
       main: "NO DATA",
       sub: "请先完成一次完整体脂测量",
+      stage: "wake",
+      visual: "idle",
     });
     return;
   }
@@ -321,6 +457,9 @@ function answerQuestion(question) {
       kicker: "NO AI",
       main: "WEIGHT ONLY",
       sub: "普通称重只有体重数据，不生成建议",
+      stage: "saved",
+      flow: "weight",
+      visual: "result",
     });
     return;
   }
@@ -348,6 +487,9 @@ document.getElementById("switchUser").addEventListener("click", () => {
     kicker: "用户归属已更正",
     main: users[selectedUserIndex],
     sub: "本次测量将归入新的家庭成员档案",
+    stage: measurementMode === "weight" ? "saved" : "result",
+    flow: measurementMode === "weight" ? "weight" : "body",
+    visual: "result",
   });
 });
 
