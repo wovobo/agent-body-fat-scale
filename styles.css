@@ -226,7 +226,7 @@ h2 {
 .screen-content {
   height: 188px;
   display: grid;
-  grid-template-rows: auto auto minmax(0, 1fr) auto auto;
+  grid-template-rows: auto auto auto minmax(0, 1fr);
   align-content: stretch;
   gap: 6px;
   text-align: center;
@@ -282,8 +282,8 @@ h2 {
 
 .screen-content[data-visual="split"],
 .screen-content[data-visual="thinking"] {
-  grid-template-rows: minmax(0, 1fr) auto;
-  gap: 8px;
+  grid-template-rows: minmax(0, 1fr);
+  gap: 0;
 }
 
 .result-split {
@@ -438,9 +438,36 @@ h2 {
   border-radius: 8px;
   background: #101417;
   color: #89959a;
-  padding: 7px 5px;
+  min-height: 56px;
+  padding: 7px 6px;
   font-size: 10px;
   font-weight: 900;
+  text-align: left;
+}
+
+.guide-panel strong {
+  display: inline-grid;
+  place-items: center;
+  width: 17px;
+  height: 17px;
+  margin-right: 4px;
+  border-radius: 50%;
+  background: #242a2f;
+  color: #fff;
+  font-size: 10px;
+}
+
+.guide-panel em {
+  color: #fff;
+  font-style: normal;
+}
+
+.guide-panel small {
+  display: block;
+  margin-top: 5px;
+  color: #b8c1c5;
+  font-size: 9px;
+  line-height: 1.25;
 }
 
 .guide-panel span.done {
@@ -664,58 +691,6 @@ h2 {
   font-size: 12px;
   font-weight: 900;
   white-space: nowrap;
-}
-
-.screen-rail {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 5px;
-}
-
-.screen-rail.weight-flow {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-
-.screen-rail span {
-  position: relative;
-  border: 1px solid #242a2f;
-  border-radius: 999px;
-  background: #101417;
-  color: #788388;
-  padding: 5px 3px;
-  font-size: 10px;
-  font-weight: 900;
-  overflow: hidden;
-}
-
-.screen-rail span::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: rgba(255, 107, 42, 0.24);
-  transform: translateX(-100%);
-}
-
-.screen-rail span.done,
-.screen-rail span.active {
-  border-color: rgba(255, 107, 42, 0.52);
-  color: #fff;
-}
-
-.screen-rail span.done::before {
-  transform: translateX(0);
-}
-
-.screen-rail span.active::before {
-  animation: railFill 1s ease-in-out infinite;
-}
-
-.screen-rail span {
-  isolation: isolate;
-}
-
-.screen-rail span::before {
-  z-index: -1;
 }
 
 .scale-body {
@@ -1056,16 +1031,6 @@ h2 {
   50% {
     transform: translateY(-50%) scale(1.18);
     opacity: 1;
-  }
-}
-
-@keyframes railFill {
-  0% {
-    transform: translateX(-100%);
-  }
-  60%,
-  100% {
-    transform: translateX(0);
   }
 }
 

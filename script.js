@@ -94,20 +94,6 @@ let lockedMeasurement = null;
 let aiThinking = false;
 let aiTimer = null;
 
-const screenFlows = {
-  body: [
-    ["wake", "上秤"],
-    ["contact", "接触"],
-    ["scan", "测量"],
-    ["result", "建议"],
-  ],
-  weight: [
-    ["wake", "上秤"],
-    ["identify", "识别"],
-    ["saved", "保存"],
-  ],
-};
-
 const demoStepFlows = {
   body: [
     ["wake", "1 上秤"],
@@ -182,32 +168,14 @@ function trendCards(profile) {
   `;
 }
 
-function phaseRail(activeStage, flow = "body") {
-  const stages = screenFlows[flow] || screenFlows.body;
-  const activeIndex = Math.max(
-    0,
-    stages.findIndex(([stage]) => stage === activeStage),
-  );
-  return `
-    <div class="screen-rail ${flow === "weight" ? "weight-flow" : ""}" aria-label="屏幕测量阶段">
-      ${stages
-        .map(([stage, label], index) => {
-          const state = index < activeIndex ? "done" : index === activeIndex ? "active" : "";
-          return `<span class="${state}">${label}</span>`;
-        })
-        .join("")}
-    </div>
-  `;
-}
-
 function motionDetails(visual) {
   if (visual === "contactWarn") {
     return `
       <div class="contact-panel">
-        <span class="ok">脚</span>
-        <span class="ok">左手</span>
-        <span class="warn">右手</span>
-        <span class="ok">站稳</span>
+        <span class="ok">双脚 OK</span>
+        <span class="ok">左手 OK</span>
+        <span class="warn">右手未稳</span>
+        <span class="ok">站姿 OK</span>
       </div>
     `;
   }
@@ -215,10 +183,10 @@ function motionDetails(visual) {
   if (visual === "contactOk") {
     return `
       <div class="contact-panel">
-        <span class="ok">脚</span>
-        <span class="ok">左手</span>
-        <span class="ok">右手</span>
-        <span class="ok">站稳</span>
+        <span class="ok">双脚 OK</span>
+        <span class="ok">左手 OK</span>
+        <span class="ok">右手 OK</span>
+        <span class="ok">站姿 OK</span>
       </div>
     `;
   }
@@ -243,9 +211,7 @@ function setScreen({
   main,
   sub,
   details = "",
-  stage = "wake",
   visual = "idle",
-  flow = "body",
 }) {
   el.screenMode.textContent = mode;
   el.screenSignal.textContent = signal;
@@ -257,7 +223,6 @@ function setScreen({
     <div class="screen-main">${main}</div>
     <div class="screen-sub">${sub}</div>
     <div class="screen-motion">${details || motionDetails(visual)}</div>
-    ${phaseRail(stage, flow)}
   `;
   window.requestAnimationFrame(() => el.screenContent.classList.add("screen-updated"));
 }
@@ -271,8 +236,6 @@ function setSplitScreen({
   aiSub = "基于本次测量和近期趋势",
   aiDetail = "",
   thinking = false,
-  stage = "result",
-  flow = "body",
 }) {
   const isWeightOnly = lockedMeasurement?.mode === "weight" || measurementMode === "weight";
   const metricHtml = isWeightOnly
@@ -310,7 +273,6 @@ function setSplitScreen({
         }
       </section>
     </div>
-    ${phaseRail(stage, flow)}
   `;
   window.requestAnimationFrame(() => el.screenContent.classList.add("screen-updated"));
 }
@@ -337,9 +299,11 @@ function guideDetails(items, activeIndex) {
     <div class="guide-panel">
       ${items
         .map(
-          (item, index) => `
+          ([title, detail], index) => `
             <span class="${index < activeIndex ? "done" : index === activeIndex ? "active" : ""}">
-              ${item}
+              <strong>${index + 1}</strong>
+              <em>${title}</em>
+              <small>${detail}</small>
             </span>
           `,
         )
@@ -448,10 +412,17 @@ function startBodyMeasurement() {
     signal: "live",
     kicker: "1 上秤确认",
     main: measurementData.weight,
-    sub: "请双脚踩住脚部电极，保持身体直立。",
+    sub: "先站稳，不要急着握手柄。",
     stage: "wake",
     visual: "weight",
-    details: guideDetails(["踩住脚部电极", "拉出手柄", "握住两侧电极"], 0),
+    details: guideDetails(
+      [
+        ["踩住脚部电极", "脚跟脚尖都贴住金属片"],
+        ["拉出手柄", "等屏幕提示后再握住"],
+        ["保持不动", "测量完成前不要移动"],
+      ],
+      0,
+    ),
   });
 
   schedule(() => {
@@ -460,13 +431,41 @@ function startBodyMeasurement() {
       mode: "GUIDE",
       signal: "handle",
       kicker: "2 拉出手柄",
-      main: "握住手柄",
-      sub: "双臂自然下垂，不要夹紧身体。",
+      main: "拉出手柄",
+      sub: "双手握住金属电极，手臂自然下垂。",
       stage: "wake",
       visual: "weight",
-      details: guideDetails(["踩住脚部电极", "拉出手柄", "握住两侧电极"], 1),
+      details: guideDetails(
+        [
+          ["双脚踩稳", "脚部电极已确认"],
+          ["握住手柄", "左右手都贴住金属片"],
+          ["手臂放松", "不要夹紧身体"],
+        ],
+        1,
+      ),
     });
-  }, 1800);
+  }, 3400);
+
+  schedule(() => {
+    setProgress(22, "确认握住手柄并保持站稳");
+    setScreen({
+      mode: "GUIDE",
+      signal: "hold",
+      kicker: "3 保持姿势",
+      main: "不要移动",
+      sub: "双脚踩稳，双手握住电极，等待接触检测。",
+      stage: "wake",
+      visual: "weight",
+      details: guideDetails(
+        [
+          ["双脚踩稳", "保持重心居中"],
+          ["双手握稳", "不要松开手柄"],
+          ["保持不动", "即将开始检测"],
+        ],
+        2,
+      ),
+    });
+  }, 6800);
 
   schedule(() => {
     setStep("contact");
@@ -476,12 +475,12 @@ function startBodyMeasurement() {
       mode: "CONTACT",
       signal: "3/4",
       kicker: "2 接触检测",
-      main: "握稳右手",
-      sub: "右手电极接触不足，保持站稳。",
+      main: "右手没接好",
+      sub: "请握紧右侧手柄金属片，身体保持不动。",
       stage: "contact",
       visual: "contactWarn",
     });
-  }, 3600);
+  }, 9800);
 
   schedule(() => {
     setProgress(38, "四点接触质量合格");
@@ -489,12 +488,12 @@ function startBodyMeasurement() {
       mode: "CONTACT",
       signal: "4/4",
       kicker: "2 接触检测",
-      main: "接触良好",
-      sub: "脚部与手部电极已连接。",
+      main: "接触已确认",
+      sub: "手脚电极全部连接，接下来开始体脂测量。",
       stage: "contact",
       visual: "contactOk",
     });
-  }, 5600);
+  }, 12800);
 
   schedule(() => {
     setStep("scan");
@@ -507,11 +506,11 @@ function startBodyMeasurement() {
       signal: "BIA",
       kicker: "3 BIA 测量中",
       main: "正在测量",
-      sub: "保持站稳，系统正在采集身体阻抗。",
+      sub: "请保持不动，屏幕完成前不要松开手柄。",
       stage: "scan",
       visual: "scan",
     });
-  }, 7400);
+  }, 15800);
 
   [
     [58, "采集上肢阻抗路径"],
@@ -530,10 +529,10 @@ function startBodyMeasurement() {
         stage: "scan",
         visual: "scan",
       });
-    }, 9000 + index * 1100);
+    }, 17800 + index * 1500);
   });
 
-  schedule(completeBodyMeasurement, 14000);
+  schedule(completeBodyMeasurement, 24600);
 }
 
 function startWeightOnly() {
